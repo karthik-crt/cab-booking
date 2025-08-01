@@ -33,3 +33,14 @@ class SendOTPSerializer(serializers.Serializer):
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
     code = serializers.CharField(max_length=6)
+
+class RideFeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ride
+        fields = ['id', 'rating', 'feedback']
+        read_only_fields = ['id']
+ 
+    def validate_rating(self, value):
+        if value < 1 or value > 5:
+            raise serializers.ValidationError("Rating must be between 1 and 5.")
+        return value

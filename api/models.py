@@ -18,6 +18,9 @@ class Ride(models.Model):
     paid = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    # ➕ Add rating and feedback
+    rating = models.IntegerField(null=True, blank=True)
+    feedback = models.TextField(null=True, blank=True)
 
 class DriverLocation(models.Model):
     driver = models.OneToOneField(User, on_delete=models.CASCADE, related_name='location')

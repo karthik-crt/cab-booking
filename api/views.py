@@ -24,7 +24,7 @@ class SendOTPView(APIView):
         code = f"{random.randint(100000,999999)}"
         OTP.objects.create(user=user, code=code)
         send_mail("Your OTP", f"OTP: {code}", 'no-reply@cabapp.com', [email])
-        return Response({"message": "OTP sent"})
+        return Response({"statusCode":"1","statusMessage":"OTP send Successfully"})
 
 class VerifyOTPView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -36,11 +36,11 @@ class VerifyOTPView(APIView):
         user = User.objects.get(email=email)
         otp = OTP.objects.filter(user=user, code=code, is_used=False).latest('created_at')
         if not otp.is_valid():
-            return Response({"error": "OTP expired or invalid"}, status=400)
+            return Response({"statusCode":"0", "statusMessage":"Failed", "error": "OTP expired or invalid"}, status=400)
         otp.is_used = True
         otp.save()
         token = RefreshToken.for_user(user)
-        return Response({"access": str(token.access_token), "refresh": str(token)})
+        return Response({"statusCode":"1", "statusMessage":"Failed","OTP Verified": str(token.access_token), "refresh": str(token)})
 
 class BookRideView(generics.CreateAPIView):
     serializer_class = RideSerializer
@@ -69,7 +69,7 @@ class AcceptRideView(APIView):
         ride.status = 'accepted'
         ride.driver = request.user
         ride.save()
-        return Response({"message": "Ride accepted"})
+        return Response({"statusCode":"1","statusMessage": "Ride accepted"})
 
 class DriverLocationUpdate(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -78,7 +78,7 @@ class DriverLocationUpdate(APIView):
         loc.latitude = request.data.get('latitude')
         loc.longitude = request.data.get('longitude')
         loc.save()
-        return Response({"message": "Location updated"})
+        return Response({"statusCode":"1","statusMessage": "Location updated"})
 
 class GetDriverLocation(APIView):
     def get(self, request, driver_id):
@@ -114,7 +114,7 @@ class ConfirmPaymentView(APIView):
         ride.completed = True
         ride.completed_at = timezone.now()
         ride.save()
-        return Response({"message": "Payment confirmed"})
+        return Response({"statusCode":"1","statusMessage": "Payment confirmed"})
     
 class RejectRideView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -123,7 +123,7 @@ class RejectRideView(APIView):
         try:
             ride = Ride.objects.get(id=ride_id, status='pending')
         except Ride.DoesNotExist:
-            return Response({"error": "Ride not found or already accepted/rejected."}, status=404)
+            return Response({"statusCode":"0","statusMessage":"failed","error": "Ride not found or already accepted/rejected."}, status=404)
  
         # Optional: Mark this ride as rejected (or simply leave as pending for next driver)
         ride.status = 'pending'  # Still pending, just rejected by this driver
@@ -136,4 +136,21 @@ class RejectRideView(APIView):
             message=f'Your ride to {ride.drop} was rejected by {request.user.username}. Searching for another driver...'
         )
  
-        return Response({"message": "Ride rejected, rider notified."})
+        return Response({"statusCode":"1","statusMessage": "Ride rejected, rider notified."})
+    
+class SubmitRideFeedbackView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+ 
+    def post(self, request, ride_id):
+        try:
+            ride = Ride.objects.get(id=ride_id, user=request.user)
+        except Ride.DoesNotExist:
+            return Response({"statusCode":"0","statusMessage":"Failed",'error': 'Ride not found'}, status=404)
+ 
+        if not ride.completed:
+            return Response({"statusCode":"0","statusMessage":"Failed",'error': 'Feedback can only be submitted after ride is completed'}, status=400)
+ 
+        serializer = RideFeedbackSerializer(ride, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"statusCode":"1","statusMessage": 'Feedback submitted successfully', 'data': serializer.data})

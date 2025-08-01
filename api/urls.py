@@ -14,6 +14,7 @@ urlpatterns = [
     path('rides/available/', AvailableRidesView.as_view()),
     path('rides/accept/<int:ride_id>/', AcceptRideView.as_view()),
     path('rides/reject/<int:ride_id>/', RejectRideView.as_view()),
+    path('rides/feedback/<int:ride_id>/', SubmitRideFeedbackView.as_view()),
 
     path('location/update/', DriverLocationUpdate.as_view()),
     path('location/<int:driver_id>/', GetDriverLocation.as_view()),
